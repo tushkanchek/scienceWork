@@ -14,13 +14,15 @@ TMP_PPTX = ROOT / "presentation_5min.build.pptx"
 ASSETS = ROOT / "presentation_assets"
 CHARTS = {
     "price": ROOT / "price_distribution_simple.png",
+    "correlations": ROOT / "predictor_correlations_simple.png",
     "coefficients": ROOT / "coefficients_ci_simple.png",
     "residuals": ROOT / "residuals_simple.png",
 }
 BRAND = {
-    "sidebar": ASSETS / "reference_sidebar.png",
-    "kfu": ASSETS / "kfu_seal_white.png",
-    "institute": ASSETS / "institute_mark_white.png",
+    "sidebar_background": ASSETS / "reference_sidebar.png",
+    "sidebar": ASSETS / "sidebar_with_kfu.png",
+    "main_white": ASSETS / "kfu_main_white.png",
+    "shield_white": ASSETS / "kfu_shield_white.png",
 }
 
 P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -159,7 +161,7 @@ class Slide:
 
 
 def add_body_title(slide, title):
-    slide.picture("rId2", BRAND["sidebar"], 0, 0, 1.21, 7.5, "KFU and institute sidebar")
+    slide.picture("rId2", BRAND["sidebar"], 0, 0, 1.21, 7.5, "Blue sidebar")
     slide.text(1.30, 0.03, 11.80, 0.62, title, 25, INK, True, valign="t", name="Slide title")
 
 
@@ -174,46 +176,68 @@ def create_slides():
     s = Slide(NAVY)
     s.text(0.45, 1.35, 5.4, 5.5, "∫", 400, "2479B7", alpha=25000, font="Times New Roman", name="Cover watermark integral")
     s.text(7.35, 1.65, 5.2, 4.8, "R²", 250, "2479B7", alpha=26000, font="Times New Roman", name="Cover watermark R squared")
-    s.picture("rId2", BRAND["kfu"], 4.70, 0.48, 1.35, 1.35, "KFU seal")
-    s.rect(6.48, 0.58, 0.02, 1.08, WHITE, name="Cover logo divider")
-    s.picture("rId3", BRAND["institute"], 7.02, 0.50, 1.42, 1.30, "Institute mark")
+    s.picture("rId2", BRAND["main_white"], 4.10, 0.54, 5.15, 0.88, "KFU standard logo")
     s.rect(2.88, 2.96, 7.58, 0.025, WHITE, name="Cover separator")
     s.text(1.10, 3.32, 11.15, 1.03,
-           "Линейная регрессия для анализа факторов,\nсвязанных с ценой товара",
+           "Анализ данных розничной торговли\nс помощью множественной регрессии",
            25, WHITE, align="ctr", font="Times New Roman", name="Presentation title")
     s.text(1.50, 4.62, 10.30, 0.76,
-           "Сравнение трёх цен конкурентов отдельно\nи в одной множественной модели",
+           "Связь общей цены с покупателями, весом\nи ценами трёх конкурентов",
            17, WHITE, align="ctr", font="Times New Roman", name="Research question")
     s.text(1.20, 6.56, 10.95, 0.40,
            "Максим Кибардин  ·  группа 05-308  ·  Казань, 2026",
            14, WHITE, align="ctr", name="Author")
-    slides.append((s, [("rId2", "kfu_seal_white.png"), ("rId3", "institute_mark_white.png")]))
+    slides.append((s, [("rId2", "kfu_main_white.png")]))
 
     # Data and price distribution.
     s = Slide()
     add_body_title(s, "Данные набора Retail Price")
     s.text(1.40, 0.85, 11.25, 0.38,
-           "676 наблюдений по 52 товарам · январь 2017 — август 2018",
+           "676 наблюдений по 52 товарам · январь 2017 — август 2018 · без пропусков и дублей",
            16, INK, True, name="Data summary")
     s.text(1.40, 1.28, 11.25, 0.40,
-           "Средняя общая цена — 1 423; медиана — 808. Факторы: покупатели, вес и цены трёх конкурентов.",
+           "Средняя цена — 1 423; медиана — 808. Факторы: покупатели, 3 цены конкурентов, вес и число фото.",
            14, MUTED, name="Variables and summary statistics")
     s.picture("rId3", CHARTS["price"], 1.40, 1.80, 11.40, 4.62, "Price distribution")
     s.text(1.50, 6.52, 11.05, 0.32,
            "Логарифмирование сжимает длинный правый хвост общей цены.",
            13, MUTED, align="ctr", name="Histogram caption")
-    slides.append((s, [("rId2", "reference_sidebar.png"), ("rId3", "image_price_distribution.png")]))
+    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_price_distribution.png")]))
+
+    # Preprocessing and multicollinearity diagnostics.
+    s = Slide()
+    add_body_title(s, "Предварительная очистка и диагностика факторов")
+    s.picture("rId3", CHARTS["correlations"], 1.40, 1.15, 6.20, 4.65, "Predictor correlation matrix")
+    s.text(1.48, 5.95, 6.10, 0.52,
+           "Тепловая карта: корреляции факторов множественной модели.",
+           13, MUTED, align="ctr", name="Correlation matrix caption")
+    x, w = 7.82, 4.95
+    s.text(x, 1.20, w, 0.36, "Почему выбраны эти факторы", 17, INK, True, name="Selected features heading")
+    s.text(x, 1.62, w, 0.88,
+           "Покупатели — спрос; цены трёх конкурентов — конкуренция; вес — свойство товара; фото — полнота карточки.",
+           13.5, INK, name="Selected features explanation")
+    add_rule(s, x, 2.58, w, "C0C0C0", 0.012)
+    s.text(x, 2.72, w, 0.36, "Проверка данных", 16, INK, True, name="Data audit heading")
+    s.text(x, 3.15, w, 1.02,
+           "0 пропусков, 0 полных дублей и 0 неположительных значений. Все 676 строк сохранены; крайние цены не удалялись автоматически.",
+           13.5, INK, name="Data audit summary")
+    add_rule(s, x, 4.28, w, "C0C0C0", 0.012)
+    s.text(x, 4.43, w, 0.36, "Исключения и диагностика", 16, INK, True, name="Excluded features heading")
+    s.text(x, 4.88, w, 1.05,
+           "unit_price × qty ≈ total_price; lag_price дублирует unit_price. s неясен; freight_price — доставка. score и volume не улучшили модель; 9 категорий требуют 8 индикаторов. VIF: 1,06–1,84.",
+           12.6, INK, name="Excluded features explanation")
+    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_predictor_correlations.png")]))
 
     # Method, in two columns and short table rows like the sample's content pages.
     s = Slide()
     add_body_title(s, "Схема исследования")
     s.text(1.42, 1.00, 5.25, 0.38, "Три модели по отдельности", 18, INK, True, name="Separate model heading")
     s.text(1.42, 1.47, 5.25, 0.67,
-           "Покупатели + вес + цена одного конкурента.\nln(total_price) ~ ln(customers) + ln(comp_j) + ln(weight)",
+           "Покупатели + вес + фото карточки + цена одного конкурента.\nВ каждой модели меняется только конкурент.",
            13.5, INK, name="Separate model formula")
     s.text(7.05, 1.00, 5.55, 0.38, "Множественная модель", 18, INK, True, name="Multiple model heading")
     s.text(7.05, 1.47, 5.55, 0.67,
-           "Покупатели + вес + цены всех трёх конкурентов.\nДобавлены ln(comp_1), ln(comp_2) и ln(comp_3).",
+           "Покупатели + вес + фото карточки + цены всех трёх конкурентов.\nВсе факторы оцениваются одновременно.",
            14, INK, name="Multiple model formula")
     add_rule(s, 1.40, 2.38, 11.35)
     rows = [
@@ -229,13 +253,13 @@ def create_slides():
     s.text(1.50, 6.12, 11.05, 0.42,
            "Во всех моделях одинаковые 676 наблюдений; ошибки кластеризованы по 52 товарам.",
            13, MUTED, align="ctr", name="Cluster note")
-    slides.append((s, [("rId2", "reference_sidebar.png")]))
+    slides.append((s, [("rId2", "sidebar_with_kfu.png")]))
 
     # Three one-competitor models, shown as a plain table.
     s = Slide()
     add_body_title(s, "Сравнение трёх отдельных моделей")
     s.text(1.42, 0.82, 11.25, 0.40,
-           "Во всех моделях учтены число покупателей и вес товара.",
+           "Во всех моделях учтены покупатели, вес и число фотографий в карточке товара.",
            15, MUTED, name="Comparison description")
     x0 = 1.42
     widths = [2.42, 1.75, 1.70, 3.02, 2.20]
@@ -246,9 +270,9 @@ def create_slides():
         x += w
     add_rule(s, x0, 2.02, 11.10, "929292", 0.018)
     rows = [
-        ("comp_1", "0,364", "0,0134", "[0,079; 0,649]", "0,236"),
-        ("comp_2", "0,669", "0,000028", "[0,377; 0,961]", "0,286"),
-        ("comp_3", "0,526", "0,00048", "[0,243; 0,809]", "0,254"),
+        ("comp_1", "0,371", "0,0121", "[0,085; 0,656]", "0,239"),
+        ("comp_2", "0,724", "2,74·10⁻⁶", "[0,448; 0,999]", "0,299"),
+        ("comp_3", "0,539", "0,00087", "[0,233; 0,845]", "0,258"),
     ]
     for i, row in enumerate(rows):
         y = 2.13 + i * 0.92
@@ -261,12 +285,12 @@ def create_slides():
            "Во всех трёх моделях связь положительная и значима на уровне 5%.",
            17, INK, True, name="Comparison conclusion one")
     s.text(1.48, 5.78, 11.0, 0.46,
-           "Наибольший скорректированный R² — у модели с comp_2: 0,286.",
+           "Наибольший скорректированный R² — у модели с comp_2: 0,299.",
            17, INK, True, name="Comparison conclusion two")
     s.text(1.48, 6.50, 11.0, 0.36,
            "Это лучшая подгонка в данной выборке, но не проверка прогноза на новых данных.",
            13, MUTED, name="Comparison caveat")
-    slides.append((s, [("rId2", "reference_sidebar.png")]))
+    slides.append((s, [("rId2", "sidebar_with_kfu.png")]))
 
     # Full model and coefficient intervals.
     s = Slide()
@@ -278,22 +302,22 @@ def create_slides():
     x, w = 8.72, 4.08
     s.text(x, 1.37, w, 0.38, "Значимы по отдельности", 17, INK, True, name="Significant heading")
     s.text(x, 1.83, w, 1.02,
-           "Покупатели: β=0,543; p<0,001\ncomp_2: β=0,532; p=0,011\nВес: β=0,135; p=0,037",
+           "Покупатели: β=0,550; p<0,001\ncomp_2: β=0,594; p=0,003\nВес: β=0,152; p=0,012",
            14, INK, name="Significant coefficients")
     add_rule(s, x, 2.94, w, "C0C0C0", 0.012)
     s.text(x, 3.09, w, 0.38, "Не подтверждены отдельно", 16, INK, True, name="Not significant heading")
-    s.text(x, 3.52, w, 0.55,
-           "comp_1 (p=0,802) и comp_3 (p=0,253): интервалы включают ноль.",
+    s.text(x, 3.52, w, 0.72,
+           "comp_1: p=0,856; comp_3: p=0,274;\nфото карточки: p=0,154.\nИнтервалы включают ноль.",
            13.5, INK, name="Not significant coefficients")
-    add_rule(s, x, 4.18, w, "C0C0C0", 0.012)
-    s.text(x, 4.32, w, 0.36, "Совместные тесты", 16, INK, True, name="Tests heading")
-    s.text(x, 4.72, w, 1.12,
-           "Конкуренты: F(3, 51)=10,58; p<0,001.\nМодель: F(5, 51)=28,73; p<0,001.\nR²=0,298; скорр. R²=0,293.",
-           13.5, INK, name="Joint tests")
+    add_rule(s, x, 4.30, w, "C0C0C0", 0.012)
+    s.text(x, 4.44, w, 0.36, "Совместные тесты", 16, INK, True, name="Tests heading")
+    s.text(x, 4.84, w, 1.02,
+           "Конкуренты: F(3, 51)=11,24; p<0,001.\nМодель: F(6, 51)=23,98; p<0,001.\nR²=0,311; скорр. R²=0,305.",
+           13, INK, name="Joint tests")
     s.text(1.40, 6.42, 7.15, 0.39,
            "Линии показывают кластерные 95%-ные доверительные интервалы.",
            12, MUTED, align="ctr", name="Coefficient plot caption")
-    slides.append((s, [("rId2", "reference_sidebar.png"), ("rId3", "image_coefficients.png")]))
+    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_coefficients.png")]))
 
     # Limitations and practical interpretation, with residual diagnostic.
     s = Slide()
@@ -315,26 +339,24 @@ def create_slides():
         if i < len(limits) - 1:
             add_rule(s, x, 2.52 + i * 0.82, w, "D0D0D0", 0.010)
     s.text(x, 5.32, w, 1.17,
-           "При росте на 10% модельная оценка цены меняется примерно на: покупатели +5,3%, comp_2 +5,2%, вес +1,3% (при прочих равных).",
+           "При росте на 10% модельная оценка цены меняется примерно на: покупатели +5,4%, comp_2 +5,8%, вес +1,5% (при прочих равных).",
            13.5, INK, True, name="Ten percent interpretation")
-    slides.append((s, [("rId2", "reference_sidebar.png"), ("rId3", "image_residuals.png")]))
+    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_residuals.png")]))
 
     # Closing, mirroring the sample's branded blue final slide.
     s = Slide(NAVY)
     s.text(0.25, 1.15, 5.3, 5.2, "∫", 390, "2479B7", alpha=25000, font="Times New Roman", name="Closing watermark integral")
     s.text(7.80, 1.25, 4.9, 4.7, "R²", 245, "2479B7", alpha=26000, font="Times New Roman", name="Closing watermark R squared")
-    s.picture("rId2", BRAND["kfu"], 0.58, 0.42, 0.86, 0.88, "KFU seal")
-    s.rect(1.58, 0.47, 0.018, 0.78, WHITE, name="Closing logo divider")
-    s.picture("rId3", BRAND["institute"], 1.82, 0.48, 0.93, 0.78, "Institute mark")
-    s.text(3.02, 0.52, 8.9, 0.65,
-           "Линейная регрессия для анализа факторов, связанных с ценой товара",
-           17, WHITE, font="Times New Roman", name="Closing running title")
+    s.picture("rId2", BRAND["main_white"], 0.48, 0.43, 4.50, 0.82, "KFU standard logo")
+    s.text(5.10, 0.43, 7.70, 0.82,
+           "Анализ данных розничной торговли\nс помощью множественной регрессии",
+           15.5, WHITE, font="Times New Roman", name="Closing running title")
     s.text(1.15, 3.00, 11.0, 0.80,
            "Спасибо за внимание!", 34, WHITE, True, align="ctr", font="Times New Roman", name="Thank you")
     s.text(1.15, 4.16, 11.0, 0.70,
            "Максим Кибардин\nСтудент группы 05-308",
            16, WHITE, align="ctr", font="Times New Roman", name="Author")
-    slides.append((s, [("rId2", "kfu_seal_white.png"), ("rId3", "institute_mark_white.png")]))
+    slides.append((s, [("rId2", "kfu_main_white.png")]))
 
     return slides
 
@@ -349,6 +371,19 @@ def slide_rels(images):
                      Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
                      Target="../slideLayouts/slideLayout1.xml")
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+
+def create_sidebar_asset():
+    from PIL import ImageDraw
+
+    bg = Image.open(BRAND["sidebar_background"]).convert("RGBA")
+    shield = Image.open(BRAND["shield_white"]).convert("RGBA")
+    shield.thumbnail((132, 156), Image.Resampling.LANCZOS)
+    x = (bg.width - shield.width) // 2
+    bg.alpha_composite(shield, (x, 34))
+    draw = ImageDraw.Draw(bg)
+    draw.line((46, 238, bg.width - 46, 238), fill=(183, 198, 212, 255), width=3)
+    bg.convert("RGB").save(BRAND["sidebar"])
 
 
 def rebuild_package(slides):
@@ -387,10 +422,10 @@ def rebuild_package(slides):
         entries[f"ppt/slides/_rels/slide{i}.xml.rels"] = slide_rels(images)
 
     media = {
-        "reference_sidebar.png": BRAND["sidebar"],
-        "kfu_seal_white.png": BRAND["kfu"],
-        "institute_mark_white.png": BRAND["institute"],
+        "sidebar_with_kfu.png": BRAND["sidebar"],
+        "kfu_main_white.png": BRAND["main_white"],
         "image_price_distribution.png": CHARTS["price"],
+        "image_predictor_correlations.png": CHARTS["correlations"],
         "image_coefficients.png": CHARTS["coefficients"],
         "image_residuals.png": CHARTS["residuals"],
     }
@@ -402,7 +437,7 @@ def rebuild_package(slides):
         core = etree.fromstring(entries[core_path])
         for el in core:
             if el.tag.endswith("}title"):
-                el.text = "Линейная регрессия для анализа факторов, связанных с ценой товара"
+                el.text = "Анализ данных розничной торговли с помощью множественной регрессии"
             elif el.tag.endswith("}subject"):
                 el.text = "Презентация к курсовой работе"
         entries[core_path] = etree.tostring(core, xml_declaration=True, encoding="UTF-8", standalone=True)
@@ -414,12 +449,13 @@ def rebuild_package(slides):
 
 
 def main():
-    required = [PPTX, *CHARTS.values(), *BRAND.values()]
+    required = [PPTX, *CHARTS.values(), BRAND["sidebar_background"], BRAND["main_white"], BRAND["shield_white"]]
     for path in required:
         if not path.exists():
             raise FileNotFoundError(path)
+    create_sidebar_asset()
     rebuild_package(create_slides())
-    print(f"Updated {PPTX.name} with 7 slides in the reference style.")
+    print(f"Updated {PPTX.name} with 8 slides in the reference style.")
 
 
 if __name__ == "__main__":
