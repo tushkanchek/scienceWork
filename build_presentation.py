@@ -13,10 +13,11 @@ PPTX = ROOT / "presentation_5min.pptx"
 TMP_PPTX = ROOT / "presentation_5min.build.pptx"
 ASSETS = ROOT / "presentation_assets"
 CHARTS = {
-    "price": ROOT / "price_distribution_simple.png",
-    "correlations": ROOT / "predictor_correlations_simple.png",
-    "coefficients": ROOT / "coefficients_ci_simple.png",
-    "residuals": ROOT / "residuals_simple.png",
+    "price": ROOT / "figures/distributions.png",
+    "correlations": ROOT / "figures/correlations.png",
+    "coefficients": ROOT / "figures/effects.png",
+    "residuals": ROOT / "figures/diagnostics.png",
+    "validation": ROOT / "figures/validation.png",
 }
 BRAND = {
     "sidebar_background": ASSETS / "reference_sidebar.png",
@@ -170,196 +171,155 @@ def add_rule(slide, x, y, w, color=GRAY, thickness=0.012):
 
 
 def create_slides():
-    slides = []
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    data = ROOT / 'results'
+    fit = pd.read_csv(data/'model_comparison.csv').set_index('model')
+    tests = pd.read_csv(data/'joint_tests.csv').set_index('test')
+    coef = pd.read_csv(data/'main_coefficients.csv').set_index('term')
+    cv = pd.read_csv(data/'cv_metrics.csv').set_index('model')
+    sensitivity = pd.read_csv(data/'sensitivity.csv').set_index('term')
+    time_check = pd.read_csv(data/'time_sensitivity.csv').set_index('model')
+    def num(x, digits=3):
+        return f'{x:.{digits}f}'.replace('.', ',')
 
-    # Cover: blue ground, mathematical watermark, and the reference KFU marks.
-    s = Slide(NAVY)
-    s.text(0.45, 1.35, 5.4, 5.5, "∫", 400, "2479B7", alpha=25000, font="Times New Roman", name="Cover watermark integral")
-    s.text(7.35, 1.65, 5.2, 4.8, "R²", 250, "2479B7", alpha=26000, font="Times New Roman", name="Cover watermark R squared")
-    s.picture("rId2", BRAND["main_white"], 4.10, 0.54, 5.15, 0.88, "KFU standard logo")
-    s.rect(2.88, 2.96, 7.58, 0.025, WHITE, name="Cover separator")
-    s.text(1.10, 3.32, 11.15, 1.03,
-           "Анализ данных розничной торговли\nс помощью множественной регрессии",
-           25, WHITE, align="ctr", font="Times New Roman", name="Presentation title")
-    s.text(1.50, 4.62, 10.30, 0.76,
-           "Связь общей цены с покупателями, весом\nи ценами трёх конкурентов",
-           17, WHITE, align="ctr", font="Times New Roman", name="Research question")
-    s.text(1.20, 6.56, 10.95, 0.40,
-           "Максим Кибардин  ·  группа 05-308  ·  Казань, 2026",
-           14, WHITE, align="ctr", name="Author")
-    slides.append((s, [("rId2", "kfu_main_white.png")]))
+    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':13})
+    terms=['ln_customers','ln_comp_1','ln_comp_2','ln_comp_3']
+    labels=['Покупатели','Конкурент 1','Конкурент 2','Конкурент 3']
+    fig,ax=plt.subplots(figsize=(8,4.5))
+    for i,term in enumerate(terms):
+        r=sensitivity.loc[term]
+        ax.plot([r['min'],r['max']],[i,i],color='#00467C',lw=4)
+        ax.scatter([r['full']],[i],s=80,color='#DA8D24',zorder=3)
+    ax.set_yticks(range(4),labels);ax.invert_yaxis()
+    ax.set(xlabel='Коэффициент: точка — вся выборка, линия — диапазон исключений',xlim=(0,.8))
+    ax.grid(axis='x',alpha=.2);ax.spines[['top','right']].set_visible(False)
+    fig.tight_layout();fig.savefig(ASSETS/'sensitivity_for_slides.png',dpi=180,bbox_inches='tight');plt.close(fig)
+    fig,ax=plt.subplots(figsize=(8,4.4))
+    names=['Среднее обучения','6 факторов','6 факторов + категория','9 факторов + категория']
+    vals=cv.loc[['Mean','M1','M2','M3'],'rmse'].to_numpy()
+    ax.barh(range(4),vals,color=['#A8B3BE','#6C9EC2','#00467C','#6C9EC2'],height=.58)
+    for i,v in enumerate(vals):ax.text(v+.015,i,num(v),va='center',fontsize=14,fontweight='bold')
+    ax.set_yticks(range(4),names);ax.invert_yaxis();ax.set_xlim(0,1.4)
+    ax.set_xlabel('RMSE логарифма на исключённых товарах — меньше лучше')
+    ax.spines[['top','right']].set_visible(False);fig.tight_layout()
+    fig.savefig(ASSETS/'validation_for_slides.png',dpi=180,bbox_inches='tight');plt.close(fig)
+    slides=[]
+    def body(title):
+        s=Slide();add_body_title(s,title);return s
+    def finish(s,image=None,hidden=False):
+        if hidden:s.root.set('show','0')
+        rels=[('rId2','sidebar_with_kfu.png')]
+        if image:rels.append(('rId3',image))
+        slides.append((s,rels))
+    def pair(s,y,heading,text):
+        s.text(1.55,y,10.9,.40,heading,19,BLUE,True)
+        s.text(1.55,y+.49,10.9,.80,text,17,INK,valign='t')
+    def foot(s,text):s.text(1.55,6.62,10.95,.43,text,13,MUTED)
 
-    # Data and price distribution.
-    s = Slide()
-    add_body_title(s, "Данные набора Retail Price")
-    s.text(1.40, 0.85, 11.25, 0.38,
-           "676 наблюдений по 52 товарам · январь 2017 — август 2018 · без пропусков и дублей",
-           16, INK, True, name="Data summary")
-    s.text(1.40, 1.28, 11.25, 0.40,
-           "Средняя цена — 1 423; медиана — 808. Факторы: покупатели, 3 цены конкурентов, вес и число фото.",
-           14, MUTED, name="Variables and summary statistics")
-    s.picture("rId3", CHARTS["price"], 1.40, 1.80, 11.40, 4.62, "Price distribution")
-    s.text(1.50, 6.52, 11.05, 0.32,
-           "Логарифмирование сжимает длинный правый хвост общей цены.",
-           13, MUTED, align="ctr", name="Histogram caption")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_price_distribution.png")]))
+    s=Slide(NAVY)
+    s.text(.4,1.4,5.4,5.5,'∫',400,'2479B7',alpha=25000,font='Times New Roman')
+    s.text(7.3,1.65,5.2,4.8,'R²',250,'2479B7',alpha=26000,font='Times New Roman')
+    s.picture('rId2',BRAND['main_white'],4.10,.54,5.15,.88,'KFU standard logo')
+    s.rect(2.88,2.96,7.58,.025,WHITE)
+    s.text(1.10,3.28,11.15,1.12,'Анализ данных розничной торговли\nс помощью множественной регрессии',25,WHITE,align='ctr',font='Times New Roman')
+    s.text(1.3,4.72,10.7,.85,'Какие факторы связаны с суммой продаж\nи помогает ли расширение модели предсказывать её?',18,WHITE,align='ctr')
+    s.text(1.2,6.24,10.9,.65,'Кибардин Максим Олегович · группа 05-308\nНаучный руководитель: Р. Ф. Салимов · Казань, 2026',14,WHITE,align='ctr')
+    slides.append((s,[('rId2','kfu_main_white.png')]))
 
-    # Preprocessing and multicollinearity diagnostics.
-    s = Slide()
-    add_body_title(s, "Предварительная очистка и диагностика факторов")
-    s.picture("rId3", CHARTS["correlations"], 1.40, 1.15, 6.20, 4.65, "Predictor correlation matrix")
-    s.text(1.48, 5.95, 6.10, 0.52,
-           "Тепловая карта: корреляции факторов множественной модели.",
-           13, MUTED, align="ctr", name="Correlation matrix caption")
-    x, w = 7.82, 4.95
-    s.text(x, 1.20, w, 0.36, "Почему выбраны эти факторы", 17, INK, True, name="Selected features heading")
-    s.text(x, 1.62, w, 0.88,
-           "Покупатели — спрос; цены трёх конкурентов — конкуренция; вес — свойство товара; фото — полнота карточки.",
-           13.5, INK, name="Selected features explanation")
-    add_rule(s, x, 2.58, w, "C0C0C0", 0.012)
-    s.text(x, 2.72, w, 0.36, "Проверка данных", 16, INK, True, name="Data audit heading")
-    s.text(x, 3.15, w, 1.02,
-           "0 пропусков, 0 полных дублей и 0 неположительных значений. Все 676 строк сохранены; крайние цены не удалялись автоматически.",
-           13.5, INK, name="Data audit summary")
-    add_rule(s, x, 4.28, w, "C0C0C0", 0.012)
-    s.text(x, 4.43, w, 0.36, "Исключения и диагностика", 16, INK, True, name="Excluded features heading")
-    s.text(x, 4.88, w, 1.05,
-           "unit_price × qty ≈ total_price; lag_price дублирует unit_price. s неясен; freight_price — доставка. score и volume не улучшили модель; 9 категорий требуют 8 индикаторов. VIF: 1,06–1,84.",
-           12.6, INK, name="Excluded features explanation")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_predictor_correlations.png")]))
+    s=body('1. Проверены данные и уточнён смысл отклика')
+    s.text(1.5,.90,11.0,.48,'676 строк · 52 товара · 9 категорий · январь 2017 — август 2018',18,INK,True)
+    s.picture('rId3',CHARTS['price'],1.40,1.62,7.65,3.66,'Sales distributions')
+    s.text(9.30,1.70,3.4,.44,'Что проверено',20,BLUE,True)
+    s.text(9.30,2.35,3.4,2.1,'Пропуски и дубли: 0.\nПроверены даты\nи ключ «товар–месяц».\n\nВсе строки сохранены.',17,INK,valign='t')
+    s.text(1.55,5.55,10.95,.63,'total_price ≈ цена единицы × количество → изучаем сумму продаж за месяц.',18,BLUE,True)
+    s.text(1.55,6.23,10.95,.48,'Логарифм сжимает правый хвост и позволяет описывать относительные связи.',16,INK)
+    finish(s,'image_price_distribution.png')
 
-    # Method, in two columns and short table rows like the sample's content pages.
-    s = Slide()
-    add_body_title(s, "Схема исследования")
-    s.text(1.42, 1.00, 5.25, 0.38, "Три модели по отдельности", 18, INK, True, name="Separate model heading")
-    s.text(1.42, 1.47, 5.25, 0.67,
-           "Покупатели + вес + фото карточки + цена одного конкурента.\nВ каждой модели меняется только конкурент.",
-           13.5, INK, name="Separate model formula")
-    s.text(7.05, 1.00, 5.55, 0.38, "Множественная модель", 18, INK, True, name="Multiple model heading")
-    s.text(7.05, 1.47, 5.55, 0.67,
-           "Покупатели + вес + фото карточки + цены всех трёх конкурентов.\nВсе факторы оцениваются одновременно.",
-           14, INK, name="Multiple model formula")
-    add_rule(s, 1.40, 2.38, 11.35)
-    rows = [
-        ("Что сравниваю", "Скорректированный R² трёх отдельных моделей на одной выборке."),
-        ("Коэффициенты", "p-value и 95%-ные доверительные интервалы; ошибки сгруппированы по товару."),
-        ("Общий вклад", "Кластерный F-тест проверяет совместную значимость трёх цен конкурентов."),
-    ]
-    for i, (label, body) in enumerate(rows):
-        y = 2.62 + i * 1.06
-        s.text(1.48, y, 2.45, 0.55, label, 16, INK, True, name="Method row heading")
-        s.text(4.05, y, 8.45, 0.62, body, 15, INK, name="Method row description")
-        add_rule(s, 1.40, y + 0.78, 11.35)
-    s.text(1.50, 6.12, 11.05, 0.42,
-           "Во всех моделях одинаковые 676 наблюдений; ошибки кластеризованы по 52 товарам.",
-           13, MUTED, align="ctr", name="Cluster note")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png")]))
+    s=body('2. Исследованы связи и выбран набор факторов')
+    s.picture('rId3',CHARTS['correlations'],1.45,1.15,5.55,5.22,'Correlation matrix')
+    x=7.30;w=5.25
+    s.text(x,1.13,w,.45,'Что показал предварительный анализ',18,BLUE,True)
+    s.text(x,1.76,w,1.14,'Покупатели и сумма продаж: r = 0,43.\nВес и объём: r = 0,64.\nПарные связи требуют проверки в общей модели.',17,valign='t')
+    s.text(x,3.12,w,.42,'Что включено в исследование',18,BLUE,True)
+    s.text(x,3.75,w,1.34,'9 числовых факторов:\nпокупатели; 3 цены конкурентов;\nвес, объём, фотографии, рейтинг, доставка.\nДополнительно — категория товара.',16.5,valign='t')
+    s.text(x,5.36,w,.95,'Цена единицы и количество исключены:\nони почти арифметически восстанавливают отклик.',16,INK,valign='t')
+    foot(s,'Тепловая карта описывает парные корреляции, а не причинные эффекты и не значимость коэффициентов.')
+    finish(s,'image_predictor_correlations.png')
 
-    # Three one-competitor models, shown as a plain table.
-    s = Slide()
-    add_body_title(s, "Сравнение трёх отдельных моделей")
-    s.text(1.42, 0.82, 11.25, 0.40,
-           "Во всех моделях учтены покупатели, вес и число фотографий в карточке товара.",
-           15, MUTED, name="Comparison description")
-    x0 = 1.42
-    widths = [2.42, 1.75, 1.70, 3.02, 2.20]
-    headers = ["Конкурент", "Коэффициент", "p-value", "95%-ный интервал", "Скорр. R²"]
-    x = x0
-    for label, w in zip(headers, widths):
-        s.text(x, 1.50, w, 0.45, label, 14, INK, True, name="Comparison table header")
-        x += w
-    add_rule(s, x0, 2.02, 11.10, "929292", 0.018)
-    rows = [
-        ("comp_1", "0,371", "0,0121", "[0,085; 0,656]", "0,239"),
-        ("comp_2", "0,724", "2,74·10⁻⁶", "[0,448; 0,999]", "0,299"),
-        ("comp_3", "0,539", "0,00087", "[0,233; 0,845]", "0,258"),
-    ]
-    for i, row in enumerate(rows):
-        y = 2.13 + i * 0.92
-        x = x0
-        for value, w in zip(row, widths):
-            s.text(x, y, w, 0.56, value, 16, INK, (i == 1 and value == "comp_2"), name="Comparison table cell")
-            x += w
-        add_rule(s, x0, y + 0.69, 11.10, "D0D0D0", 0.012)
-    s.text(1.48, 5.18, 11.0, 0.45,
-           "Во всех трёх моделях связь положительная и значима на уровне 5%.",
-           17, INK, True, name="Comparison conclusion one")
-    s.text(1.48, 5.78, 11.0, 0.46,
-           "Наибольший скорректированный R² — у модели с comp_2: 0,299.",
-           17, INK, True, name="Comparison conclusion two")
-    s.text(1.48, 6.50, 11.0, 0.36,
-           "Это лучшая подгонка в данной выборке, но не проверка прогноза на новых данных.",
-           13, MUTED, name="Comparison caveat")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png")]))
+    s=body('3. Сравнены три варианта множественной регрессии')
+    s.text(1.5,.96,11.0,.45,'Одна выборка и один отклик. Меняем только состав объясняющих факторов.',18,BLUE,True)
+    rows=[('Вариант','Что добавлено','R² скорр.'),
+          ('Базовая (M1)','Покупатели, 3 цены, вес, фото',num(fit.loc['M1','adjusted_r2'])),
+          ('С категориями (M2)','8 индикаторов категории',num(fit.loc['M2','adjusted_r2'])),
+          ('Расширенная (M3)','Рейтинг, объём и доставка',num(fit.loc['M3','adjusted_r2']))]
+    for i,row in enumerate(rows):
+        y=1.84+i*.67
+        for xx,ww,t in zip([1.5,5.5,10.7],[3.8,5.0,1.8],row):s.text(xx,y,ww,.49,t,17,INK,i==0)
+        add_rule(s,1.5,y+.55,11)
+    s.text(1.55,4.82,10.95,.78,'Категория улучшила подгонку: 0,305 → 0,361.\nТри новых признака повысили её до 0,379.',20,BLUE,True)
+    s.text(1.55,5.84,10.95,.50,'ln(Y) = b₀ + b₁x₁ + … + b₉x₉ + эффекты категории + ε',19,BLUE,True)
+    s.text(1.55,6.33,10.95,.30,'Y — сумма продаж; b — коэффициенты; x — факторы (шкалы на слайде 5); ε — ошибка.',13)
+    foot(s,'Оценивание — МНК; ошибки по товару. R² описывает подгонку; проверка предсказаний — слайд 7.')
+    finish(s)
 
-    # Full model and coefficient intervals.
-    s = Slide()
-    add_body_title(s, "Множественная модель: все цены конкурентов вместе")
-    s.text(1.40, 0.82, 11.25, 0.40,
-           "Каждый коэффициент показывает условную связь при прочих равных.",
-           15, MUTED, name="Multiple model description")
-    s.picture("rId3", CHARTS["coefficients"], 1.25, 1.38, 7.25, 4.90, "Multiple regression coefficients")
-    x, w = 8.72, 4.08
-    s.text(x, 1.37, w, 0.38, "Значимы по отдельности", 17, INK, True, name="Significant heading")
-    s.text(x, 1.83, w, 1.02,
-           "Покупатели: β=0,550; p<0,001\ncomp_2: β=0,594; p=0,003\nВес: β=0,152; p=0,012",
-           14, INK, name="Significant coefficients")
-    add_rule(s, x, 2.94, w, "C0C0C0", 0.012)
-    s.text(x, 3.09, w, 0.38, "Не подтверждены отдельно", 16, INK, True, name="Not significant heading")
-    s.text(x, 3.52, w, 0.72,
-           "comp_1: p=0,856; comp_3: p=0,274;\nфото карточки: p=0,154.\nИнтервалы включают ноль.",
-           13.5, INK, name="Not significant coefficients")
-    add_rule(s, x, 4.30, w, "C0C0C0", 0.012)
-    s.text(x, 4.44, w, 0.36, "Совместные тесты", 16, INK, True, name="Tests heading")
-    s.text(x, 4.84, w, 1.02,
-           "Конкуренты: F(3, 51)=11,24; p<0,001.\nМодель: F(6, 51)=23,98; p<0,001.\nR²=0,311; скорр. R²=0,305.",
-           13, INK, name="Joint tests")
-    s.text(1.40, 6.42, 7.15, 0.39,
-           "Линии показывают кластерные 95%-ные доверительные интервалы.",
-           12, MUTED, align="ctr", name="Coefficient plot caption")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_coefficients.png")]))
+    s=body('4. Проверено, какие связи сохраняются в общей модели')
+    labelmap={'ln_customers':'ln покупателей','ln_comp_1':'ln цены конкурента 1','ln_comp_2':'ln цены конкурента 2',
+              'ln_comp_3':'ln цены конкурента 3','ln_product_weight_g':'ln веса','product_photos_qty':'Фотографии',
+              'product_score':'Рейтинг','ln_volume':'ln объёма','freight_price':'Доставка'}
+    for xx,ww,t in [(1.5,3.1,'Фактор'),(4.7,1.3,'Коэфф.'),(6.15,1.6,'p Холма')]:s.text(xx,1.12,ww,.45,t,17,INK,True)
+    add_rule(s,1.5,1.65,6.2)
+    for i,(term,label) in enumerate(labelmap.items()):
+        r=coef.loc[term];y=1.79+i*.43
+        value=num(r.coef) if abs(r.coef)>=.0005 else '≈ 0'
+        pv='< 0,001' if r.p_holm<.001 else num(r.p_holm)
+        for xx,ww,t in [(1.5,3.1,label),(4.7,1.3,value),(6.15,1.6,pv)]:s.text(xx,y,ww,.37,t,16,BLUE if r.p_holm<.05 else INK,r.p_holm<.05)
+    s.text(8.12,1.13,4.48,.80,'Цены конкурентов:\nсовместная связь есть',20,BLUE,True)
+    s.text(8.12,2.15,4.48,.48,'F(3, 51) = '+num(tests.loc['competitors','F'],2)+'; p = '+num(tests.loc['competitors','p']),17)
+    s.text(8.12,2.94,4.48,1.00,'Отдельный конкурент\nпосле 9 проверок с Холмом\nне выделяется.',18,valign='t')
+    s.text(8.12,4.36,4.48,1.12,'Покупатели +10% →\nоценка суммы продаж +6,8%*\nВес: p Холма = '+num(coef.loc['ln_product_weight_g','p_holm'])+' — на границе.',17,valign='t')
+    s.text(1.55,6.10,10.95,.79,'ln — натуральный логарифм; остальные факторы в исходной шкале. Результаты основной M3.\n* Геометрическое среднее при прочих равных. Чувствительность к времени — следующий слайд.',15,MUTED)
+    finish(s)
 
-    # Limitations and practical interpretation, with residual diagnostic.
-    s = Slide()
-    add_body_title(s, "Интерпретация и ограничения")
-    s.picture("rId3", CHARTS["residuals"], 1.22, 1.22, 6.86, 4.28, "Residual plot")
-    s.text(1.38, 5.58, 6.52, 0.66,
-           "Разброс остатков неодинаков. Это визуальная диагностика, а не формальный тест.",
-           13, MUTED, align="ctr", name="Residual plot caption")
-    x, w = 8.30, 4.48
-    s.text(x, 1.28, w, 0.40, "Ограничения", 18, INK, True, name="Limitations heading")
-    limits = [
-        "Данные наблюдательные: причинность не устанавливается.",
-        "52 товара и только период 2017–2018 годов.",
-        "Не учтены сезонность, категории и другие факторы.",
-        "Нет проверки модели на новых наблюдениях.",
-    ]
-    for i, line in enumerate(limits):
-        s.text(x, 1.83 + i * 0.82, w, 0.68, "• " + line, 14.5, INK, name="Limitation")
-        if i < len(limits) - 1:
-            add_rule(s, x, 2.52 + i * 0.82, w, "D0D0D0", 0.010)
-    s.text(x, 5.32, w, 1.17,
-           "При росте на 10% модельная оценка цены меняется примерно на: покупатели +5,4%, comp_2 +5,8%, вес +1,5% (при прочих равных).",
-           13.5, INK, True, name="Ten percent interpretation")
-    slides.append((s, [("rId2", "sidebar_with_kfu.png"), ("rId3", "image_residuals.png")]))
+    s=body('5. Проверена устойчивость к товарам и времени')
+    s.picture('rId3',ASSETS/'sensitivity_for_slides.png',1.40,1.35,7.30,4.80,'Sensitivity to removing a product')
+    x=8.95;w=3.78
+    s.text(x,1.32,w,.58,'Добавлены 19 месяцев',19,BLUE,True)
+    s.text(x,2.08,w,1.18,'Конкуренты совместно:\nM3: p = '+num(time_check.loc['M3','competitors_p'])+'\nС месяцами: p = '+num(time_check.loc['M3_time','competitors_p']),18,valign='t')
+    s.text(x,3.63,w,1.08,'Вес: p после Холма\n'+num(time_check.loc['M3','weight_p_holm'])+' → '+num(time_check.loc['M3_time','weight_p_holm']),18,INK,True,valign='t')
+    s.text(x,5.01,w,1.12,'При учёте времени\nвывод на уровне 5%\nне сохраняется.',18,BLUE,True,valign='t')
+    s.text(1.55,6.44,10.95,.64,'Слева — диапазоны оценок при 52 исключениях товара, не доверительные интервалы.\nСправа — та же выборка с календарными эффектами; это не доказательство отсутствия связи.',14,MUTED)
+    finish(s,'image_sensitivity_slides.png')
 
-    # Closing, mirroring the sample's branded blue final slide.
-    s = Slide(NAVY)
-    s.text(0.25, 1.15, 5.3, 5.2, "∫", 390, "2479B7", alpha=25000, font="Times New Roman", name="Closing watermark integral")
-    s.text(7.80, 1.25, 4.9, 4.7, "R²", 245, "2479B7", alpha=26000, font="Times New Roman", name="Closing watermark R squared")
-    s.picture("rId2", BRAND["main_white"], 0.48, 0.43, 4.50, 0.82, "KFU standard logo")
-    s.text(5.10, 0.43, 7.70, 0.82,
-           "Анализ данных розничной торговли\nс помощью множественной регрессии",
-           15.5, WHITE, font="Times New Roman", name="Closing running title")
-    s.text(1.15, 3.00, 11.0, 0.80,
-           "Спасибо за внимание!", 34, WHITE, True, align="ctr", font="Times New Roman", name="Thank you")
-    s.text(1.15, 4.16, 11.0, 0.70,
-           "Максим Кибардин\nСтудент группы 05-308",
-           16, WHITE, align="ctr", font="Times New Roman", name="Author")
-    slides.append((s, [("rId2", "kfu_main_white.png")]))
+    s=body('6. Качество проверено на товарах вне обучения')
+    s.text(1.55,.97,10.95,.47,'5 частей по товарам: ни одна строка проверяемого товара не участвует в обучении.',17,BLUE,True)
+    s.picture('rId3',ASSETS/'validation_for_slides.png',1.38,1.82,7.55,4.29,'RMSE: '+', '.join(name+'='+num(cv.loc[name,'rmse']) for name in ['Mean','M1','M2','M3']))
+    s.text(9.16,1.86,3.55,.48,'С чем сравнивали',19,BLUE,True)
+    s.text(9.16,2.57,3.55,1.15,'Простой прогноз среднего\nи три регрессии —\nна одних и тех же\nисключённых товарах.',17,valign='t')
+    s.text(9.16,4.13,3.55,1.25,'Модель с категориями\nимеет RMSE 1,030.\nРасширенная — 1,033:\nвыигрыша не получено.',18,INK,True,valign='t')
+    s.text(1.55,6.15,10.95,.81,'Рост подгонки не перешёл в улучшение предсказания на выбранном разбиении.\nОшибки на шкале логарифма. Проверка не относится к будущим месяцам.',16,MUTED)
+    finish(s,'image_validation_slides.png')
 
+    s=body('Итоги: что сделано и что удалось установить')
+    pair(s,1.04,'Подготовлена воспроизводимая модель розничных продаж','Проверены 30 столбцов; сохранены 676 строк.\nСравнены 6 факторов, добавление категории и расширение до 9 факторов.')
+    pair(s,2.66,'Связь конкурентных цен чувствительна к учёту времени','Основная M3: p = '+num(time_check.loc['M3','competitors_p'])+'; с 19 месяцами: p = '+num(time_check.loc['M3_time','competitors_p'])+'.\nСовместная значимость на уровне 5% не сохраняется в календарном расширении.')
+    pair(s,4.28,'Дополнительные признаки не улучшили предсказание','С рейтингом, объёмом и доставкой RMSE 1,033 против 1,030 без них.\nНа выбранном разбиении расширение модели себя не оправдало.')
+    s.text(1.55,6.06,10.95,.55,'Ограничения: 52 товара; возможны общие ошибки категории и месяца. Выводы — о связях.',14,MUTED)
+    s.text(1.55,6.79,10.95,.36,'Спасибо за внимание!',18,BLUE,True,align='r')
+    finish(s)
+
+    s=body('Резерв: как проверяются коэффициенты')
+    pair(s,1.03,'Шкалы числовых факторов','Логарифмы: покупатели, 3 цены, вес, объём. В уровнях: фото, рейтинг, доставка.')
+    pair(s,2.40,'Индивидуальная проверка','t = b / SEcluster; b — оценка коэффициента, SEcluster — её кластерная ошибка.')
+    pair(s,3.77,'Почему поправка Холма?','9 индивидуальных проверок. Поправка учитывает риск хотя бы одного ложного отклонения.')
+    pair(s,5.14,'Что проверяет совместный F-критерий?','Гипотезу о трёх одновременно нулевых коэффициентах, а не каждого отдельно.')
+    finish(s,hidden=True)
+    s=body('Резерв: диагностика и ограничения')
+    s.picture('rId3',CHARTS['residuals'],1.35,1.18,11.25,3.37,'Residual diagnostics')
+    s.text(1.55,4.86,10.95,.69,'VIF первого конкурента = 7,16: разделение индивидуальных связей затруднено.\nКвадрат логарифма покупателей: p = 0,202; конкретная кривизна не подтверждена.',16.5)
+    s.text(1.55,5.95,10.95,.91,'Кластеризация по товару не покрывает все общие ошибки разных товаров.\nОстатки асимметричны; причинность, оптимальные цены и будущий прогноз не установлены.',16,MUTED)
+    finish(s,'image_residuals.png',hidden=True)
     return slides
-
 
 def slide_rels(images):
     root = etree.Element(q(PKG_REL_NS, "Relationships"), nsmap={None: PKG_REL_NS})
@@ -428,9 +388,22 @@ def rebuild_package(slides):
         "image_predictor_correlations.png": CHARTS["correlations"],
         "image_coefficients.png": CHARTS["coefficients"],
         "image_residuals.png": CHARTS["residuals"],
+        "image_validation.png": CHARTS["validation"],
+        "image_sensitivity_slides.png": ASSETS / "sensitivity_for_slides.png",
+        "image_validation_slides.png": ASSETS / "validation_for_slides.png",
     }
     for name, path in media.items():
         entries[f"ppt/media/{name}"] = path.read_bytes()
+
+    app_path = "docProps/app.xml"
+    if app_path in entries:
+        app = etree.fromstring(entries[app_path])
+        for node in app:
+            if node.tag.endswith("}Slides"):
+                node.text = str(len(slides))
+            elif node.tag.endswith("}HiddenSlides"):
+                node.text = str(sum(slide.root.get("show") == "0" for slide, _ in slides))
+        entries[app_path] = etree.tostring(app, xml_declaration=True, encoding="UTF-8", standalone=True)
 
     core_path = "docProps/core.xml"
     if core_path in entries:
@@ -455,7 +428,7 @@ def main():
             raise FileNotFoundError(path)
     create_sidebar_asset()
     rebuild_package(create_slides())
-    print(f"Updated {PPTX.name} with 8 slides in the reference style.")
+    print(f"Updated {PPTX.name} with 8 main slides and 2 hidden backup slides in the reference style.")
 
 
 if __name__ == "__main__":

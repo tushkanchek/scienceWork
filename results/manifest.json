@@ -1,0 +1,45 @@
+{
+  "checks": {
+    "rows": 676,
+    "products": 52,
+    "categories": 9,
+    "months": 20,
+    "missing": 0,
+    "duplicates": 0,
+    "duplicate_product_month": 0,
+    "nonpositive_log_values": 0,
+    "negative_freight": 0,
+    "zero_freight": 1,
+    "calendar_mismatch": 0,
+    "identity_within_0_3_percent": 643,
+    "identity_max_gap": 0.03058306418099551,
+    "category_month_customer_max_unique": 1,
+    "start": "2017-01-01",
+    "end": "2018-08-01",
+    "base_category": "garden_tools"
+  },
+  "seed": 20261030,
+  "fold_method": "category_balanced_product_folds",
+  "time_sensitivity": {
+    "reference_month": "2017-01",
+    "month_indicators": 19
+  },
+  "sha256": "a1cd6562c1d65db5abecf57fa7084f8fee8ea13e88df64dd56bcf0de75b09461",
+  "versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "statsmodels": "0.15.0",
+    "scikit-learn": "1.9.1"
+  },
+  "validated": [
+    "OLS coefficients",
+    "cluster CR1 covariance",
+    "t p-values",
+    "confidence intervals",
+    "group separation",
+    "category coverage",
+    "full rank training matrices",
+    "complete OOF predictions"
+  ]
+}
