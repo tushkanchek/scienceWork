@@ -1,0 +1,70 @@
+% Титульный лист по example/КУРСОВАЯ РАБОТА.docx.
+% Подключается из coursework.tex; отдельная компиляция не требуется.
+% Реквизиты оставлены в одном месте для редактирования.
+\newcommand{\CourseworkTitle}{АНАЛИЗ ДАННЫХ РОЗНИЧНОЙ ТОРГОВЛИ\\
+С ПОМОЩЬЮ МНОЖЕСТВЕННОЙ РЕГРЕССИИ}
+\newcommand{\CourseworkCourse}{3}
+\newcommand{\CourseworkGroup}{05-308}
+\newcommand{\CourseworkStudent}{Кибардин М.\,О.}
+\newcommand{\CourseworkSupervisor}{Салимов Р.\,Ф.}
+\newcommand{\CourseworkSupervisorDegree}{канд. физ.-мат. наук}
+\newcommand{\CourseworkYear}{2026}
+\newcommand{\CourseworkDate}{«\underline{\hspace{9mm}}»\enspace
+\underline{\hspace{23mm}}\enspace\CourseworkYear~г.}
+
+\begin{titlepage}
+\thispagestyle{empty}
+\noindent
+% Резерв первой базовой линии предотвращает выход фиксированного блока
+% за высоту страницы и появление лишнего листа перед содержанием.
+\begin{minipage}[t][\dimexpr\textheight-\topskip\relax][t]{\textwidth}
+\setstretch{1}
+\fontsize{14bp}{18.2bp}\selectfont
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\vspace{0pt}
+{\centering\bfseries
+Министерство науки и высшего образования Российской Федерации\\
+Федеральное государственное автономное образовательное учреждение\\
+высшего образования «КАЗАНСКИЙ (ПРИВОЛЖСКИЙ)\\
+ФЕДЕРАЛЬНЫЙ УНИВЕРСИТЕТ»\par}
+\vspace{16mm}
+{\centering
+ИНСТИТУТ МАТЕМАТИКИ И МЕХАНИКИ ИМ. Н.И. ЛОБАЧЕВСКОГО\\
+КАФЕДРА МАТЕМАТИЧЕСКОЙ СТАТИСТИКИ\par}
+\vspace{14mm}
+Направление подготовки (специальность): 02.03.01~-- Математика и
+компьютерные науки\par
+Профиль (специализация): Наука о данных\par
+\vspace{28mm}
+{\centering КУРСОВАЯ РАБОТА\par}
+\vspace{8mm}
+\begin{minipage}[t][21mm][t]{\textwidth}
+\centering\bfseries
+\setstretch{1}\fontsize{14bp}{16.1bp}\selectfont
+\CourseworkTitle\par
+\end{minipage}\par
+\vspace{18mm}
+% В образце фамилия студента справа на строке с номером группы;
+% фамилия руководителя — справа на строке с учёной степенью.
+\begingroup
+\renewcommand{\arraystretch}{1}
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+Студент \CourseworkCourse~курса & \\
+группы \CourseworkGroup & \CourseworkStudent\\
+\CourseworkDate & \\
+\end{tabular*}\par
+\vspace{8mm}
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+Научный руководитель & \\
+\CourseworkSupervisorDegree & \CourseworkSupervisor\\
+\CourseworkDate & \\
+\end{tabular*}\par
+\endgroup
+\vfill
+{\centering Казань~-- \textit{\CourseworkYear}\par}
+\end{minipage}
+\end{titlepage}
+% В extreport окружение titlepage сбрасывает счётчик следующей страницы.
+% Титульный лист — страница 1, поэтому содержание начинается со страницы 2.
+\setcounter{page}{2}

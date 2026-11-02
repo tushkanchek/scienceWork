@@ -70,13 +70,16 @@ labels=[x for x in re.findall(r'\\label\{([^{}]+)\}',tex) if '#' not in x]
 labels+=re.findall(r'\\result(?:table|figure)\{[^{}]+\}\{[^{}]+\}\{([^{}]+)\}',tex)
 assert len(labels)==len(set(labels)), 'Duplicate labels'
 for ref in re.findall(r'\\(?:ref|eqref)\{([^{}]+)\}',tex): assert ref in labels,ref
-# Check nested environments; rendered layout requires a separate PDF build.
-stack=[]
-for action,env in re.findall(r'\\(begin|end)\{([^{}]+)\}',tex):
-    if action=='begin':stack.append(env)
-    else: assert stack.pop()==env,env
-assert not stack
-assert tex.index('Приложение А') > tex.index('\\chapter*{Литература}')
+# Check both the report and its separately editable cover.
+# Rendered layout still requires a separate PDF build.
+for filename in ['coursework.tex', 'titlepage.tex']:
+    stack=[]
+    content=(root/filename).read_text()
+    for action,env in re.findall(r'\\(begin|end)\{([^{}]+)\}',content):
+        if action=='begin':stack.append(env)
+        else: assert stack and stack.pop()==env,(filename,env)
+    assert not stack,filename
+assert tex.index('\\workappendix{А}') > tex.index('\\chapter*{Список использованных источников}')
 print('PASS: exported statistics, Holm, adjusted R2, out-of-training metrics,')
 print('group/category separation, executed notebook, shared appendix source, TeX references.')
 print('PDF rendering was not checked.')

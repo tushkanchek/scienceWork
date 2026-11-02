@@ -1,9 +1,32 @@
 \documentclass[14pt,a4paper]{extreport}
 
-\usepackage[T2A]{fontenc}
-\usepackage[utf8]{inputenc}
+% XeLaTeX/LuaLaTeX: настоящий Times New Roman при наличии шрифта.
+% pdfLaTeX: прежний совместимый режим с Times-подобным mathptmx.
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T2A]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{mathptmx}
+\else
+  \usepackage{fontspec}
+  \defaultfontfeatures{Ligatures=TeX}
+  \IfFontExistsTF{Times New Roman}{%
+    \setmainfont{Times New Roman}%
+  }{%
+    \IfFontExistsTF{Liberation Serif}{%
+      \setmainfont{Liberation Serif}%
+      \PackageWarning{coursework}{Times New Roman not installed; using Liberation Serif}%
+    }{%
+      \PackageError{coursework}{Install Times New Roman}{The main font is required for the selected Unicode engine.}%
+    }%
+  }
+  \IfFontExistsTF{Courier New}{\setmonofont{Courier New}}{%
+    \IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}}{%
+      \IfFontExistsTF{Liberation Mono}{\setmonofont{Liberation Mono}}{}%
+    }%
+  }
+\fi
 \usepackage[english,russian]{babel}
-\usepackage{mathptmx}
 \usepackage[left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs,array}
@@ -12,28 +35,79 @@
 \usepackage{longtable}
 \usepackage{fvextra}
 \usepackage{setspace}
-\onehalfspacing
-\usepackage[hidelinks]{hyperref}
-
-% Оформление заголовков по образцу: в заголовке главы используется номер,
-% а не слово «Глава».
+\usepackage{indentfirst}
+\usepackage{caption}
+\usepackage{xurl}
+\usepackage{enumitem}
+% Опция 14pt класса extreport использует размер из стандартной шкалы TeX.
+% Задаём ровно 14 пунктов Word/PDF (bp), как на титульном листе.
+% При onehalfspacing базовый шаг 16.8bp умножается на 1.25: итого 21bp.
 \makeatletter
-\renewcommand{\@makeschapterhead}[1]{%
-  \vspace*{10pt}%
-  {\parindent\z@\raggedright\normalfont\large #1\par\nobreak\vskip 12pt}%
+\renewcommand\normalsize{%
+  \@setfontsize\normalsize{14bp}{16.8bp}%
+  \abovedisplayskip 14bp plus 3bp minus 7bp
+  \abovedisplayshortskip 0bp plus 4bp
+  \belowdisplayshortskip 7bp plus 4bp minus 3bp
+  \belowdisplayskip \abovedisplayskip
+  \let\@listi\@listI
 }
 \makeatother
-\newcommand{\workchapter}[2]{%
-  \refstepcounter{chapter}%
-  \setcounter{section}{0}%
-  \chapter*{#1\quad #2}%
-  \addcontentsline{toc}{chapter}{#1\quad #2}%
+\normalsize
+\onehalfspacing
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\pagestyle{plain}
+\frenchspacing
+\emergencystretch=2em
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+% Подписи: «Таблица N — ...» над таблицей слева, «Рисунок N — ...» снизу.
+\DeclareCaptionLabelSeparator{gostdash}{\space---\space}
+\captionsetup{font=small,labelfont=normalfont,labelsep=gostdash}
+\captionsetup[table]{position=top,justification=raggedright,singlelinecheck=false}
+\captionsetup[figure]{position=bottom,justification=centering}
+\fvset{baselinestretch=1}
+
+\usepackage[hidelinks]{hyperref}
+
+% Разделы начинаются с новой страницы, номер — без слова «Глава» и без точки.
+% Структурные заголовки — по центру прописными, подразделы — 14 пт полужирным.
+\makeatletter
+\renewcommand{\@makechapterhead}[1]{%
+  {\parindent\z@\normalfont\normalsize\bfseries
+   \hyphenpenalty=10000\exhyphenpenalty=10000
+   \noindent\hspace*{1.25cm}\thechapter\quad #1\par\nobreak\vskip 14pt}%
 }
-\renewcommand{\contentsname}{Содержание}
-\renewcommand{\bibname}{Литература}
+\renewcommand{\@makeschapterhead}[1]{%
+  {\parindent\z@\centering\normalfont\normalsize\bfseries
+   \hyphenpenalty=10000\exhyphenpenalty=10000
+   \MakeUppercase{#1}\par\nobreak\vskip 14pt}%
+}
+\renewcommand\section{\@startsection{section}{1}{1.25cm}%
+  {\baselineskip}{.5\baselineskip}%
+  {\normalfont\normalsize\bfseries\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000}}
+\renewcommand\subsection{\@startsection{subsection}{2}{1.25cm}%
+  {\baselineskip}{.5\baselineskip}%
+  {\normalfont\normalsize\bfseries\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000}}
+\renewcommand*\l@chapter{\@dottedtocline{0}{0pt}{1.7em}}
+\makeatother
+\newcommand{\workchapter}[2]{\chapter{#2}}
+\newcommand{\workappendix}[2]{%
+  \chapter*{Приложение~#1}%
+  \addcontentsline{toc}{chapter}{Приложение #1. #2}%
+  \begin{center}\normalfont\normalsize\bfseries #2\end{center}%
+  \nobreak\vspace{\baselineskip}%
+}
+\addto\captionsrussian{%
+  \renewcommand{\contentsname}{СОДЕРЖАНИЕ}%
+  \renewcommand{\bibname}{СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ}%
+  \renewcommand{\figurename}{Рисунок}%
+  \renewcommand{\tablename}{Таблица}%
+}
 
 \newcommand{\resulttable}[3]{%
-\begin{table}[htbp]\centering\small
+\begin{table}[htbp]\centering\small\singlespacing
 \caption{#2}\label{#3}\input{report_tables/#1.tex}
 \end{table}}
 \newcommand{\resultfigure}[3]{%
@@ -42,30 +116,9 @@
 \caption{#2}\label{#3}\end{figure}}
 \begin{document}
 \selectlanguage{russian}
-\renewcommand{\contentsname}{Содержание}
+\renewcommand{\contentsname}{СОДЕРЖАНИЕ}
 
-\begin{titlepage}
-\begin{center}
-  {\large Министерство науки и высшего образования Российской Федерации}\\[4pt]
-  {\large Федеральное государственное автономное образовательное учреждение}\\[-1pt]
-  {\large высшего образования}\\[4pt]
-  {\large\bfseries «КАЗАНСКИЙ (ПРИВОЛЖСКИЙ) ФЕДЕРАЛЬНЫЙ УНИВЕРСИТЕТ»}\\[10pt]
-  {\large Институт математики и механики им. Н.И. Лобачевского}\\[4pt]
-  {\large Кафедра математической статистики}\\[30pt]
-  {\Large\bfseries Курсовая работа}\\[26pt]
-  {\Large\bfseries Анализ данных розничной торговли с помощью множественной регрессии}\\[35pt]
-  \begin{flushright}
-    Студент группы 05-308\\
-    Кибардин Максим Олегович\\[18pt]
-    «\_\_\_»\_\_\_\_\_\_\_\_\_\_\_ 2026 г.\quad \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ М.О. Кибардин\\[28pt]
-    Научный руководитель\\
-    канд. физ.-мат. наук \\
-    «\_\_\_»\_\_\_\_\_\_\_\_\_\_\_\_ 2026 г.\quad \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ Р.Ф. Салимов
-  \end{flushright}
-  \vfill
-  Казань --- 2026 г.
-\end{center}
-\end{titlepage}
+\input{titlepage.tex}
 
 \tableofcontents
 \clearpage
@@ -124,7 +177,7 @@
 
 Набор факторов выбран по содержанию задачи. Покупатели характеризуют активность категории, конкурентные цены --- рыночное окружение, вес и объём --- физические свойства, фотографии и рейтинг --- характеристики товара и карточки, доставка --- условия продажи. Категория позволяет учитывать систематические различия ассортимента.
 
-\begin{table}[htbp]\centering\small
+\begin{table}[htbp]\centering\small\singlespacing
 \caption{Роли переменных в исследовании}\label{tab:selection}
 \begin{tabular}{p{0.36\textwidth}p{0.56\textwidth}}
 \toprule Группа & Решение и причина \\\midrule
@@ -138,7 +191,7 @@
 \texttt{lag\_price} & Оставлен для отдельной задачи временного прогнозирования.\\
 Длины названия и описания & Описаны, но не добавлены к выбранным характеристикам карточки.\\
 \texttt{ps1--3}, \texttt{fp1--3} & Не включены: требуют уточнения сопоставления конкурентов и расширяют вопрос исследования.\\
-Календарные поля, \texttt{s} & Календарь описывает период; смысл \texttt{s} не подтверждён. В модель не включены.\\
+Календарные поля, \texttt{s} & Календарь описывает период и используется в дополнительной проверке с индикаторами месяцев; в основную M3 не входит. Смысл \texttt{s} не подтверждён; столбец исключён.\\
 \bottomrule\end{tabular}\end{table}
 
 Для всех 30 полей дополнительно сохранены тип, число уникальных значений и пропусков, а для числовых --- диапазон и число товаров с изменениями показателя во времени. Это позволяет проверить, какие признаки фактически несут временную информацию. Исключение признака из модели не означает доказанного отсутствия связи с откликом.
@@ -400,9 +453,9 @@ $\widehat y_i^{\,out}$ --- предсказание модели, не обуч�
 Выводы ограничены наблюдательным характером данных, небольшим числом товаров, редкими категориями и неполным описанием происхождения некоторых агрегатов. Группировка ошибок по товару учитывает зависимость внутри товара, но предполагает независимость разных товарных групп; общие изменения рынка и категории могут нарушать это условие. Само совпадение признака покупателей внутри категории и месяца не доказывает корреляцию ошибок, однако указывает на общий уровень измерения и возможные общие ненаблюдаемые факторы. Зависимость ошибок между товарами отдельно не проверялась; поэтому приведённые p-value и интервалы условны относительно выбранной модели ошибок. Особенно осторожно следует трактовать пограничный вывод по весу ($p_{Holm}=0{,}049$). Индивидуальные эффекты товаров не моделировались; календарные эффекты рассмотрены в дополнительной спецификации. Их включение не заменяет проверку зависимости ошибок разных товаров. Поэтому результаты следует рассматривать как исследовательское описание связей, а не доказательство причинных эффектов или готовую систему назначения цен.
 
 \clearpage
-\chapter*{Литература}
-\addcontentsline{toc}{chapter}{Литература}
-\begin{enumerate}
+\chapter*{Список использованных источников}
+\addcontentsline{toc}{chapter}{Список использованных источников}
+\begin{enumerate}[label=\arabic*,leftmargin=1.25cm,labelsep=.5em,itemsep=0pt,parsep=0pt]
 \item Кобзарь А.И. Прикладная математическая статистика. --- М.: Физматлит, 2006.
 \item Wooldridge J.M. Introductory Econometrics: A Modern Approach. --- 6th ed. --- Cengage Learning, 2016.
 \item Retail Price Optimization. Набор данных. Kaggle. URL: \url{https://www.kaggle.com/datasets/suddharshan/retail-price-optimization} (дата обращения: 30.10.2026).
@@ -414,29 +467,24 @@ $\widehat y_i^{\,out}$ --- предсказание модели, не обуч�
 \end{enumerate}
 
 \clearpage
-\chapter*{Приложение А. Подготовка данных и предварительный анализ}
-\addcontentsline{toc}{chapter}{Приложение А. Подготовка данных и предварительный анализ}
+\workappendix{А}{Подготовка данных и предварительный анализ}
 Код приложений выполняется последовательно в одном сеансе Python из каталога проекта. Это те же вычислительные блоки, из которых сформирован ноутбук \texttt{science\_work\_simple.ipynb}. Отдельные листинги используют переменные предыдущих блоков. Полный скрипт --- \texttt{analysis\_retail.py}; зависимости перечислены в \texttt{requirements.txt}.
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_01.py}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_02.py}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_03.py}
 \clearpage
-\chapter*{Приложение Б. Модели и проверка гипотез}
-\addcontentsline{toc}{chapter}{Приложение Б. Модели и проверка гипотез}
+\workappendix{Б}{Модели и проверка гипотез}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_04.py}
 \clearpage
-\chapter*{Приложение В. Диагностика и интерпретация}
-\addcontentsline{toc}{chapter}{Приложение В. Диагностика и интерпретация}
+\workappendix{В}{Диагностика и интерпретация}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_05.py}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_06.py}
 \clearpage
-\chapter*{Приложение Г. Качество предсказания и воспроизводимость}
-\addcontentsline{toc}{chapter}{Приложение Г. Качество предсказания и воспроизводимость}
+\workappendix{Г}{Качество предсказания и воспроизводимость}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_07.py}
 \VerbatimInput[fontsize=\scriptsize,breaklines=true,numbers=left]{appendix/code_08.py}
 \clearpage
-\chapter*{Приложение Д. Дополнительные оценки}
-\addcontentsline{toc}{chapter}{Приложение Д. Дополнительные оценки}
+\workappendix{Д}{Дополнительные оценки}
 База --- \texttt{garden\_tools}. Интервалы индивидуальные кластерные; редкие категории представлены лишь двумя товарами, поэтому оценки требуют осторожности. Константа и полная таблица всех коэффициентов сохранены в \texttt{results/all\_coefficients.csv}.
 \begin{center}\small\input{report_tables/category_coefficients.tex}\end{center}
 \subsection*{Девять факторов при календарном контроле}

@@ -12,6 +12,8 @@
 - `analysis_retail.py` — единый исходный код с разделителями ячеек.
 - `science_work_simple.ipynb` — выполненный ноутбук с таблицами и графиками.
 - `coursework.tex` — обновлённый отчёт: введение, две главы, заключение, литература, приложения А–Д.
+- `titlepage.tex` — титульный лист по `example/КУРСОВАЯ РАБОТА.docx`, подключается из отчёта; здесь редактируются тема и личные данные.
+- `FORMATTING.md` — параметры оформления, выбранный образец и настройка шрифта.
 - `results/` — CSV всех результатов и `manifest.json` с версиями, проверками и хешем данных.
 - `figures/` — семь актуальных графиков/составных рисунков, используемых в отчёте.
 - `report_tables/` — таблицы LaTeX, автоматически полученные из CSV.
@@ -45,7 +47,16 @@ python run_notebook.py
 
 Для работы без Jupyter достаточно `python analysis_retail.py` и затем `python build_analysis_materials.py`. Если меняется код анализа, выполнить эту последовательность заново. Для проверки структуры отчёта и согласованности артефактов: `python validate_materials.py`. Независимый пересчёт коэффициентов, ковариации и предсказаний: `python validate_statistics.py`. Презентация, речь и учебное пособие проверяются командой `python validate_defense_materials.py`.
 
-PDF пользователь собирает самостоятельно из `coursework.tex`. Вместе с ним нужны каталоги `figures/`, `report_tables/` и `appendix/`. Используются русский pdfLaTeX, `extreport`, `amsmath`, `booktabs`, `graphicx`, `hyperref` и `fvextra` для листингов с переносами строк. В этом этапе PDF не собирался, поэтому итоговая пагинация и визуальная вёрстка не проверены.
+PDF пользователь собирает самостоятельно из `coursework.tex`. Рядом обязательно нужны `titlepage.tex` и каталоги `figures/`, `report_tables/`, `appendix/`. Для Times New Roman выберите **XeLaTeX** и установите этот шрифт в системе сборки. Основной текст — 14 пт, полуторный интервал, абзац 1,25 см; поля слева 30, справа 15, сверху и снизу 20 мм. Титульник повторяет структуру DOCX-образца, учитывается как страница 1 без напечатанного номера; содержание начинается со страницы 2.
+
+```bash
+xelatex -interaction=nonstopmode -halt-on-error coursework.tex
+xelatex -interaction=nonstopmode -halt-on-error coursework.tex
+```
+
+Если Times New Roman отсутствует, XeLaTeX использует Liberation Serif с предупреждением в журнале; это замена шрифта, а не точный Times New Roman. Прежняя сборка через pdfLaTeX сохранена, но также не гарантирует Times New Roman, особенно для кириллицы. Нужны пакеты `fontspec` (XeLaTeX), `babel` с русским языком, `extreport`, `amsmath`, `booktabs`, `graphicx`, `hyperref`, `fvextra`, `setspace`, `caption`, `xurl`, `enumitem` и их зависимости. Настройки и основания — в `FORMATTING.md`.
+
+PDF после изменения оформления не собирался: итоговые переносы, пагинацию и расположение блоков нужно проверить после вашей сборки.
 
 ## Результаты
 

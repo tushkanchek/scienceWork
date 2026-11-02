@@ -16,8 +16,8 @@ with ZipFile(ROOT/'defense_guide_bundle.zip') as z:
     assert z.read('defense_guide.tex')==guide.read_bytes()
     for image in images:assert z.read(image)==(ROOT/image).read_bytes()
 
-names=['FINAL_CHECK.md','README.md','PLAN.md','REVIEW.md','DatasetInfo.md',
-       'summary.md','TOLEARN.md','coursework.tex','defense_guide.tex',
+names=['FINAL_CHECK.md','README.md','FORMATTING.md','PLAN.md','REVIEW.md','DatasetInfo.md',
+       'summary.md','TOLEARN.md','coursework.tex','titlepage.tex','defense_guide.tex',
        'defense_guide_bundle.zip','presentation_5min.pptx','presentation_5min.pdf',
        'speech_5min.md','science_work_simple.ipynb','retail_price.csv',
        'analysis_retail.py','build_analysis_materials.py','build_presentation.py',
