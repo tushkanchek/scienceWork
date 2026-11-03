@@ -16,6 +16,7 @@ oof=pd.read_csv(root/'results/oof_predictions.csv')
 loo=pd.read_csv(root/'results/leave_one_product_out.csv')
 vifs=pd.read_csv(root/'results/vif.csv').set_index('term')
 effects=pd.read_csv(root/'results/effects.csv').set_index('term')
+variants=pd.read_csv(root/'results/weight_volume_sensitivity.csv')
 for model in ['S1','S2','S3','M1','M2','M3','M3_time']:
     fields=base if not model.startswith('S') else ['customers','comp_'+model[1], 'product_weight_g','product_photos_qty']
     columns=['const']+['ln_'+c if c!='product_photos_qty' else c for c in fields]
@@ -65,6 +66,21 @@ for model in ['S1','S2','S3','M1','M2','M3','M3_time']:
         assert X.shape[1]==37 and np.linalg.matrix_rank(X)==37
         print('Calendar control: F=',F,'p=',ts.competitors_p,'weight Holm p=',ts.weight_p_holm)
     if model=='M3':
+        # Independently check both reduced physical-characteristic models too.
+        for omitted in ['ln_volume','ln_product_weight_g']:
+            keep=[i for i,c in enumerate(columns) if c!=omitted]
+            reduced_names=[columns[i] for i in keep]
+            Z=X[:,keep];zb=np.linalg.lstsq(Z,y,rcond=None)[0];ze=y-Z@zb
+            zinv=np.linalg.inv(Z.T@Z);zmeat=np.zeros((Z.shape[1],Z.shape[1]))
+            for product in d.product_id.unique():
+                mask=(d.product_id==product).to_numpy()
+                score=Z[mask].T@ze[mask];zmeat+=np.outer(score,score)
+            zV=52/51*675/(676-Z.shape[1])*zinv@zmeat@zinv
+            zhalf=stats.t.ppf(.975,51)*np.sqrt(np.diag(zV))
+            for row in variants[variants.omitted==omitted].itertuples():
+                j=reduced_names.index(row.term)
+                np.testing.assert_allclose([zb[j],zb[j]-zhalf[j],zb[j]+zhalf[j]],
+                                          [row.coef,row.low,row.high],rtol=1e-7,atol=1e-9)
         for label,ids in [('competitors',[columns.index('ln_comp_'+str(j)) for j in [1,2,3]]),
              ('additional_block',[columns.index(c) for c in ['product_score','ln_volume','freight_price']]),
              ('categories',[columns.index('cat_'+c) for c in cat]),('overall',list(range(1,len(b))))]:
@@ -101,4 +117,4 @@ for model in ['S1','S2','S3','M1','M2','M3','M3_time']:
         print('Condition number, scaled design:',np.linalg.cond(np.column_stack([np.ones(len(d)),(X[:,1:]-X[:,1:].mean(0))/X[:,1:].std(0)])))
 print(pd.DataFrame(answers).to_string(index=False))
 print('PASS: seven models including calendar sensitivity, CR1 covariance and p-values, main and calendar joint tests, VIF,')
-print('effect estimates, 52 exclusions, and predictions for all group folds.')
+print('effect estimates, both weight/volume sensitivity models, 52 exclusions, and predictions for all group folds.')

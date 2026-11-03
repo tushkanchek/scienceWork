@@ -179,6 +179,12 @@ def reference_docx(path: Path):
         f.first_line_indent = Cm(1.25)
         f.line_spacing, f.keep_with_next = 1.5, True
         f.page_break_before = level == 1
+    # Explicit cover emphasis, independent of the viewer's default body style.
+    s = doc.styles.add_style('Cover Emphasis', WD_STYLE_TYPE.PARAGRAPH)
+    s.base_style = doc.styles['Normal']
+    style_font(s)
+    s.font.bold = True
+    s.font.cs_bold = True
     for name in ['Caption', 'Table Caption', 'Image Caption']:
         if name not in doc.styles:
             doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
@@ -214,6 +220,10 @@ def add_cover(doc):
         p.alignment = align
         r = p.add_run(text)
         r.font.name, r.font.size, r.bold = 'Times New Roman', Pt(14), bold
+        r.font.cs_bold = bold
+        fonts = r._r.get_or_add_rPr().find(qn('w:rFonts'))
+        for kind in ['ascii', 'hAnsi', 'eastAsia', 'cs']:
+            fonts.set(qn(f'w:{kind}'), 'Times New Roman')
         return p
     center = WD_ALIGN_PARAGRAPH.CENTER
     para('Министерство науки и высшего образования Российской Федерации\n'
@@ -242,6 +252,10 @@ def add_cover(doc):
     elements = [deepcopy(x) for x in holder.element.body if x.tag != qn('w:sectPr')]
     for element in reversed(elements):
         doc.element.body.insert(0, element)
+    for paragraph in doc.paragraphs[:len(holder.paragraphs)]:
+        if (paragraph.text.startswith('Министерство')
+                or paragraph.text == value('CourseworkTitle')):
+            paragraph.style = doc.styles['Cover Emphasis']
 
 
 def fill_toc(doc):

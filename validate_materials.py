@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import re
+from io import StringIO
 import numpy as np
 import pandas as pd
 import nbformat
@@ -59,6 +60,21 @@ for i,(cell,block) in enumerate(zip(code_cells,blocks),1):
     assert cell.execution_count == i
     assert not any(o.output_type=='error' for o in cell.outputs)
     assert (root/'appendix'/f'code_{i:02}.py').read_text().strip()==block
+# Check the visible notebook results as well as code/execution counters.
+rendered=[]
+for cell in code_cells:
+    for output in cell.outputs:
+        html=output.get('data',{}).get('text/html','')
+        if '<table' in html:
+            rendered.append(pd.read_html(StringIO(html),index_col=0)[0].reset_index(drop=True))
+displayed_names=['categories','column_audit','descriptive','target_correlations',
+    'model_comparison','main_coefficients','time_coefficients','joint_tests',
+    'time_joint_test','time_sensitivity','vif','sensitivity',
+    'weight_volume_sensitivity','effects','cv_metrics']
+assert len(rendered)==len(displayed_names)
+for name,frame in zip(displayed_names,rendered):
+    pd.testing.assert_frame_equal(frame,load(name).round(5).reset_index(drop=True),
+                                  check_dtype=False,check_exact=False,rtol=1e-8,atol=1e-8)
 tex=(root/'coursework.tex').read_text()
 for table,caption,label in re.findall(r'\\resulttable\{([^{}]+)\}\{([^{}]+)\}\{([^{}]+)\}',tex):
     assert (root/'report_tables'/f'{table}.tex').exists(),table
@@ -72,14 +88,26 @@ assert len(labels)==len(set(labels)), 'Duplicate labels'
 for ref in re.findall(r'\\(?:ref|eqref)\{([^{}]+)\}',tex): assert ref in labels,ref
 # Check both the report and its separately editable cover.
 # Rendered layout still requires a separate PDF build.
-for filename in ['coursework.tex', 'titlepage.tex']:
+for filename in ['coursework.tex', 'titlepage.tex', 'defense_guide.tex']:
     stack=[]
     content=(root/filename).read_text()
     for action,env in re.findall(r'\\(begin|end)\{([^{}]+)\}',content):
         if action=='begin':stack.append(env)
         else: assert stack and stack.pop()==env,(filename,env)
     assert not stack,filename
+    # A mistaken \[10pt] opens display math; \\[10pt] is a line break.
+    uncommented='\n'.join(re.split(r'(?<!\\)%',line,maxsplit=1)[0]
+                           for line in content.splitlines())
+    math_stack=[]
+    for delimiter in re.findall(r'(?<!\\)\\([\[\]()])',uncommented):
+        if delimiter in ['[','(']:
+            assert not math_stack,(filename,'Nested math delimiter',delimiter)
+            math_stack.append(delimiter)
+        else:
+            expected='[' if delimiter==']' else '('
+            assert math_stack and math_stack.pop()==expected,(filename,delimiter)
+    assert not math_stack,(filename,'Unclosed math delimiter')
 assert tex.index('\\workappendix{А}') > tex.index('\\chapter*{Список использованных источников}')
 print('PASS: exported statistics, Holm, adjusted R2, out-of-training metrics,')
-print('group/category separation, executed notebook, shared appendix source, TeX references.')
+print('group/category separation, 15 rendered notebook tables, shared appendix source, TeX references.')
 print('PDF rendering was not checked.')
