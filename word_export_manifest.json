@@ -3,9 +3,9 @@
   "txt": "coursework_check.txt",
   "pandoc": "pandoc 3.9",
   "display_equations": 17,
-  "prose_segments_checked": 324,
+  "prose_segments_checked": 328,
   "sources": {
-    "coursework.tex": "c7ed2c5151cf938c35a993bea12bd892e188aaa5de3334a2abb4f040b6b59525",
+    "coursework.tex": "39f887c2c60b7875e5d194cec31538e21dbc4baec820c9feacc2223d3cfc10da",
     "titlepage.tex": "595d5397dc040ed13e3b2a84a6e4f654a88aea1f3c0a21f3f377d40147f0ebd5",
     "build_word.py": "29d9eb118710d3b8c921b58ebeb01bb3e4e9da31a457a257e4bdc5b98b823f5c",
     "report_tables/categories.tex": "5787be045833e625d30d997c634f4f7ac590a1d980a30d007308aceda9289824",
@@ -39,8 +39,8 @@
     "figures/validation.png": "388ed1de7d673a0364c0fb11c9749ba940e2a891b671694dc59b2300a09d555a"
   },
   "outputs": {
-    "coursework_check.docx": "f303bd08f7d355823cf979f62de838870da9a4879593b0e6d18bb26b2baf094d",
-    "coursework_check.txt": "38a4df4e19b681891c37cd09922ae701e66bd54c76a407086d2a62d6f1a16b8e"
+    "coursework_check.docx": "9bca7d5294f3f1410bd2fc52008b4cc7c178bd0bc4d58634d57f227404dc9458",
+    "coursework_check.txt": "a3e2e491acb251229254be8d10c8f61d31e44c571b6ab3dd528694deab10d1be"
   },
   "note": "Format export only; no plagiarism or AI detector was run."
 }
